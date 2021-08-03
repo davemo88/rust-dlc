@@ -4,10 +4,6 @@ extern crate bitcoincore_rpc;
 extern crate bitcoincore_rpc_json;
 extern crate dlc_manager;
 
-mod memory_storage_provider;
-mod mock_oracle_provider;
-mod mock_time;
-
 use bitcoin_rpc_provider::BitcoinCoreProvider;
 use bitcoin_test_utils::rpc_helpers::init_clients;
 use bitcoincore_rpc::RpcApi;
@@ -29,7 +25,7 @@ use dlc_messages::oracle_msgs::{
 };
 use dlc_messages::{CetAdaptorSignatures, Message};
 use dlc_trie::digit_decomposition::decompose_value;
-use mock_oracle_provider::MockOracle;
+use mocks::mock_oracle_provider::MockOracle;
 use secp256k1_zkp::rand::{seq::SliceRandom, thread_rng, RngCore};
 use secp256k1_zkp::{EcdsaAdaptorSignature, Signature};
 use std::collections::HashMap;
@@ -608,16 +604,8 @@ fn manager_execution_test(test_params: TestParams, path: TestPath) {
     let bob_sync_send = sync_send.clone();
     let (alice_rpc, bob_rpc, sink_rpc) = init_clients();
 
-    let network = bitcoin::network::constants::Network::Regtest;
-
-    let alice_bitcoin_core = Arc::new(BitcoinCoreProvider {
-        client: alice_rpc,
-        network,
-    });
-    let bob_bitcoin_core = Arc::new(BitcoinCoreProvider {
-        client: bob_rpc,
-        network,
-    });
+    let alice_bitcoin_core = Arc::new(BitcoinCoreProvider { client: alice_rpc });
+    let bob_bitcoin_core = Arc::new(BitcoinCoreProvider { client: bob_rpc });
 
     let mut alice_oracles = HashMap::with_capacity(1);
     let mut bob_oracles = HashMap::with_capacity(1);
@@ -628,10 +616,10 @@ fn manager_execution_test(test_params: TestParams, path: TestPath) {
         bob_oracles.insert(oracle.get_public_key(), Arc::clone(&oracle));
     }
 
-    let alice_store = memory_storage_provider::MemoryStorage::new();
-    let bob_store = memory_storage_provider::MemoryStorage::new();
-    let mock_time = Arc::new(mock_time::MockTime {});
-    mock_time::set_time((test_params.contract_input.maturity_time as u64) - 1);
+    let alice_store = mocks::memory_storage_provider::MemoryStorage::new();
+    let bob_store = mocks::memory_storage_provider::MemoryStorage::new();
+    let mock_time = Arc::new(mocks::mock_time::MockTime {});
+    mocks::mock_time::set_time((test_params.contract_input.maturity_time as u64) - 1);
 
     let alice_manager = Arc::new(Mutex::new(Manager::new(
         Arc::clone(&alice_bitcoin_core),
@@ -768,7 +756,7 @@ fn manager_execution_test(test_params: TestParams, path: TestPath) {
             periodic_check!(alice_manager_send, contract_id, Contract::Confirmed{ .. });
             periodic_check!(bob_manager_send, contract_id, Contract::Confirmed{ .. });
 
-            mock_time::set_time((test_params.contract_input.maturity_time as u64) + 1);
+            mocks::mock_time::set_time((test_params.contract_input.maturity_time as u64) + 1);
 
             // Select the first one to close or refund randomly
             let (first, second) = if thread_rng().next_u32() % 2 == 0 {
@@ -795,7 +783,7 @@ fn manager_execution_test(test_params: TestParams, path: TestPath) {
 
                     periodic_check!(second, contract_id, Contract::Confirmed{ .. });
 
-                    mock_time::set_time(
+                    mocks::mock_time::set_time(
                         ((test_params.contract_input.maturity_time
                             + dlc_manager::manager::REFUND_DELAY) as u64)
                             + 1,

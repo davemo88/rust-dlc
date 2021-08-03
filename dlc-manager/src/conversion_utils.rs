@@ -553,9 +553,7 @@ impl From<&AcceptedContract> for AcceptDlc {
                     .unwrap()
                     .iter()
                     .cloned()
-                    .map::<CetAdaptorSignature, _>(|x| CetAdaptorSignature {
-                        signature: x,
-                    })
+                    .map::<CetAdaptorSignature, _>(|x| CetAdaptorSignature { signature: x })
                     .collect(),
             },
             refund_signature: contract.accept_refund_signature,

@@ -46,6 +46,18 @@ pub trait Time {
     fn unix_time_now(&self) -> u64;
 }
 
+///
+pub struct SystemTimeProvider {}
+
+impl Time for SystemTimeProvider {
+    fn unix_time_now(&self) -> u64 {
+        let now = std::time::SystemTime::now();
+        now.duration_since(std::time::UNIX_EPOCH)
+            .expect("Unexpected time error")
+            .as_secs()
+    }
+}
+
 /// Wallet trait to provide functionalities related to generating, storing and
 /// managing bitcoin addresses and UTXOs.
 pub trait Wallet {
@@ -78,7 +90,7 @@ pub trait Blockchain {
     /// Broadcast the given transaction to the bitcoin network.
     fn send_transaction(&self, transaction: &Transaction) -> Result<(), Error>;
     /// Returns the network currently used (mainnet, testnet or regtest).
-    fn get_network(&self) -> bitcoin::network::constants::Network;
+    fn get_network(&self) -> Result<bitcoin::network::constants::Network, Error>;
 }
 
 /// Storage trait provides functionalities to store and retrieve DLCs.
@@ -91,6 +103,8 @@ pub trait Storage {
     fn delete_contract(&mut self, id: &ContractId) -> Result<(), Error>;
     /// Update the given contract.
     fn update_contract(&mut self, contract: &Contract) -> Result<(), Error>;
+    /// Get contract offers
+    fn get_contract_offers(&self) -> Result<Vec<OfferedContract>, Error>;
     /// Returns the set of contracts in signed state.
     fn get_signed_contracts(&self) -> Result<Vec<SignedContract>, Error>;
     /// Returns the set of confirmed contracts.

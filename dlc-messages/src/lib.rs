@@ -97,7 +97,7 @@ impl Readable for FundingInput {
 }
 
 /// Contains an adaptor signature for a CET input and its associated DLEQ proof.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CetAdaptorSignature {
     pub signature: EcdsaAdaptorSignature,
 }
@@ -123,7 +123,7 @@ impl Readable for CetAdaptorSignature {
 }
 
 /// Contains a list of adaptor signature for a number of CET inputs.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CetAdaptorSignatures {
     pub ecdsa_adaptor_signatures: Vec<CetAdaptorSignature>,
 }
@@ -167,7 +167,7 @@ impl Readable for CetAdaptorSignatures {
 }
 
 /// Contains the witness elements to use to make a funding transaction input valid.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FundingSignature {
     pub witness_elements: Vec<WitnessElement>,
 }
@@ -200,7 +200,7 @@ impl Readable for FundingSignature {
 
 /// Contains a list of witness elements to satisfy the spending conditions of
 /// funding inputs.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FundingSignatures {
     pub funding_signatures: Vec<FundingSignature>,
 }
@@ -231,7 +231,7 @@ impl Readable for FundingSignatures {
 }
 
 /// Contains serialized data representing a single witness stack element.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WitnessElement {
     pub witness: Vec<u8>,
 }
@@ -252,7 +252,7 @@ impl Readable for WitnessElement {
 /// Contains information about a party wishing to enter into a DLC with
 /// another party. The contained information is sufficient for any other party
 /// to create a set of transactions representing the contract and its terms.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OfferDlc {
     pub contract_flags: u8,
     pub chain_hash: [u8; 32],
@@ -315,9 +315,13 @@ impl Readable for OfferDlc {
     fn read<R: ::std::io::Read>(mut reader: &mut R) -> Result<OfferDlc, DecodeError> {
         let contract_flags = Readable::read(reader)?;
         let chain_hash = Readable::read(reader)?;
-        let contract_info_opt: Option<ContractInfo>;
-        decode_tlv!(&mut reader, contract_info_opt, option);
-        let contract_info = contract_info_opt.ok_or(DecodeError::InvalidValue)?;
+        let contract_info: ContractInfo;
+        let tlv_type: BigSize = Readable::read(reader)?;
+        if tlv_type.0 != CONTRACT_INFO_TYPE {
+            return Err(DecodeError::InvalidValue);
+        }
+        let length: BigSize = Readable::read(reader)?;
+        decode_tlv!(&mut reader, contract_info, required);
         let funding_pubkey = Readable::read(reader)?;
         let payout_spk = Readable::read(reader)?;
         let payout_serial_id = Readable::read(reader)?;
@@ -326,7 +330,15 @@ impl Readable for OfferDlc {
         let mut funding_inputs = Vec::<FundingInput>::with_capacity(num_funding_inputs as usize);
 
         for _ in 0..num_funding_inputs {
-            funding_inputs.push(Readable::read(reader)?);
+            let funding_type = <BigSize as Readable>::read(reader)?;
+            let len = <BigSize as Readable>::read(reader)?;
+            if funding_type.0 != FUNDING_INPUT_TYPE {
+                return Err(DecodeError::InvalidValue);
+            }
+
+            let funding_input;
+            decode_tlv!(&mut reader, funding_input, required);
+            funding_inputs.push(funding_input);
         }
 
         let change_spk = Readable::read(reader)?;
@@ -359,7 +371,7 @@ impl Readable for OfferDlc {
 /// information is sufficient for the offering party to re-build the set of
 /// transactions representing the contract and its terms, and guarantees the offering
 /// party that they can safely provide signatures for their funding input.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AcceptDlc {
     pub temporary_contract_id: [u8; 32],
     pub accept_collateral: u64,
@@ -433,7 +445,7 @@ impl Readable for AcceptDlc {
 
 /// Contains all the required signatures for the DLC transactions from the offering
 /// party.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SignDlc {
     pub contract_id: [u8; 32],
     pub cet_adaptor_signatures: CetAdaptorSignatures,
@@ -478,6 +490,7 @@ impl Readable for SignDlc {
 }
 
 #[allow(missing_docs)]
+#[derive(Debug)]
 pub enum Message {
     OfferDlc(OfferDlc),
     AcceptDlc(AcceptDlc),

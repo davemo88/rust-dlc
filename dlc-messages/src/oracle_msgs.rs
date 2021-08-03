@@ -33,9 +33,18 @@ impl<'a> OracleInfo {
 impl Writeable for OracleInfo {
     fn write<W: Writer>(&self, writer: &mut W) -> Result<(), ::std::io::Error> {
         match self {
-            OracleInfo::OracleInfoV0(oracle_info) => oracle_info.write(writer),
-            OracleInfo::OracleInfoV1(oracle_info) => oracle_info.write(writer),
-            OracleInfo::OracleInfoV2(oracle_info) => oracle_info.write(writer),
+            OracleInfo::OracleInfoV0(oracle_info) => {
+                OracleInfoV0::TYPE.write(writer)?;
+                oracle_info.write(writer)
+            }
+            OracleInfo::OracleInfoV1(oracle_info) => {
+                OracleInfoV1::TYPE.write(writer)?;
+                oracle_info.write(writer)
+            }
+            OracleInfo::OracleInfoV2(oracle_info) => {
+                OracleInfoV2::TYPE.write(writer)?;
+                oracle_info.write(writer)
+            }
         }
     }
 }
@@ -268,8 +277,12 @@ pub enum EventDescriptor {
 impl Writeable for EventDescriptor {
     fn write<W: Writer>(&self, writer: &mut W) -> Result<(), ::std::io::Error> {
         match self {
-            EventDescriptor::EnumEventDescriptorV0(enum_event) => enum_event.write(writer),
+            EventDescriptor::EnumEventDescriptorV0(enum_event) => {
+                EnumEventDescriptorV0::TYPE.write(writer)?;
+                enum_event.write(writer)
+            }
             EventDescriptor::DigitDecompositionEventDescriptorV0(decomp_event) => {
+                DigitDecompositionEventDescriptorV0::TYPE.write(writer)?;
                 decomp_event.write(writer)
             }
         }

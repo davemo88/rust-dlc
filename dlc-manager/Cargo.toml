@@ -10,7 +10,7 @@ bitcoin = {version = "0.26.0"}
 dlc = {version = "0.0.1", path = "../dlc"}
 dlc-messages = {version = "0.0.1", path = "../dlc-messages"}
 dlc-trie = {version = "0.0.1", path = "../dlc-trie"}
-lightning = {version = "0.0.98", git = "https://github.com/p2pderivatives/rust-lightning", branch = "dlc-version"}
+lightning = {version = "0.0.98", git = "https://github.com/p2pderivatives/rust-lightning", branch = "dlc-version-generic"}
 log = "0.4.14"
 secp256k1-zkp = {version = "0.4.0", features = ["hashes", "rand", "rand-std"], git = "https://github.com/p2pderivatives/rust-secp256k1-zkp", branch = "add-as-ref-ecdsa-adaptor"}
 
@@ -20,3 +20,4 @@ bitcoin-test-utils = {version = "0.0.1", path = "../bitcoin-test-utils"}
 bitcoincore-rpc = {version = "0.13.0"}
 bitcoincore-rpc-json = {version = "0.13.0"}
 env_logger = "0.8.4"
+mocks = {path = "../mocks"}

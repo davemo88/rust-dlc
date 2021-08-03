@@ -48,7 +48,7 @@ impl Readable for ContractOutcome {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ContractInfo {
     ContractInfoV0(ContractInfoV0),
     ContractInfoV1(ContractInfoV1),
@@ -66,8 +66,14 @@ impl ContractInfo {
 impl Writeable for ContractInfo {
     fn write<W: Writer>(&self, writer: &mut W) -> Result<(), ::std::io::Error> {
         match self {
-            ContractInfo::ContractInfoV0(v0) => v0.write(writer),
-            ContractInfo::ContractInfoV1(v1) => v1.write(writer),
+            ContractInfo::ContractInfoV0(v0) => {
+                ContractInfoV0::TYPE.write(writer)?;
+                v0.write(writer)
+            }
+            ContractInfo::ContractInfoV1(v1) => {
+                ContractInfoV1::TYPE.write(writer)?;
+                v1.write(writer)
+            }
         }
     }
 }
@@ -84,7 +90,7 @@ impl Readable for ContractInfo {
 }
 
 /// Structure containing the list of outcome of a DLC contract.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ContractInfoV0 {
     pub total_collateral: u64,
     pub contract_info: ContractInfoInner,
@@ -115,7 +121,7 @@ impl Readable for ContractInfoV0 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ContractInfoV1 {
     pub total_collateral: u64,
     pub contract_infos: Vec<ContractInfoInner>,
@@ -194,11 +200,16 @@ impl Writeable for ContractDescriptor {
 
 impl Readable for ContractDescriptor {
     fn read<R: ::std::io::Read>(reader: &mut R) -> Result<ContractDescriptor, DecodeError> {
-        let payouts = read_vec(reader)?;
-
-        Ok(ContractDescriptor::ContractDescriptorV0(
-            ContractDescriptorV0 { payouts },
-        ))
+        let version = <u16 as Readable>::read(reader)?;
+        match version {
+            ContractDescriptorV0::TYPE => Ok(ContractDescriptor::ContractDescriptorV0(
+                Readable::read(reader)?,
+            )),
+            ContractDescriptorV1::TYPE => Ok(ContractDescriptor::ContractDescriptorV1(
+                Readable::read(reader)?,
+            )),
+            _ => Err(DecodeError::InvalidValue),
+        }
     }
 }
 
@@ -234,7 +245,7 @@ pub struct ContractDescriptorV1 {
 }
 
 impl Encode for ContractDescriptorV1 {
-    const TYPE: u16 = 42768;
+    const TYPE: u16 = 42770;
 }
 
 impl Writeable for ContractDescriptorV1 {
